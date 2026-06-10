@@ -1,0 +1,110 @@
+================================================================================
+                    RHEL 伺服器部署 - 複製貼上指令集
+================================================================================
+
+【步驟 1】在本地機器執行 - 上傳所有檔案
+--------------------------------------------------------------------------------
+scp -i ~/Downloads/ssh_private_key.pem -P 2223 target/spancer_spring_demo-0.0.1-SNAPSHOT.jar U7YBP7Q@165.192.138.173:./spring_demo/
+
+scp -i ~/Downloads/ssh_private_key.pem -P 2223 test_api.sh U7YBP7Q@165.192.138.173:./spring_demo/
+
+scp -i ~/Downloads/ssh_private_key.pem -P 2223 setup_java.sh U7YBP7Q@165.192.138.173:./spring_demo/
+
+scp -i ~/Downloads/ssh_private_key.pem -P 2223 setup_java_yum.sh U7YBP7Q@165.192.138.173:./spring_demo/
+
+scp -i ~/Downloads/ssh_private_key.pem -P 2223 start_app.sh U7YBP7Q@165.192.138.173:./spring_demo/
+
+scp -i ~/Downloads/ssh_private_key.pem -P 2223 stop_app.sh U7YBP7Q@165.192.138.173:./spring_demo/
+
+
+【步驟 2】SSH 登入到 RHEL 伺服器
+--------------------------------------------------------------------------------
+ssh -i ~/Downloads/ssh_private_key.pem -p 2223 U7YBP7Q@165.192.138.173
+
+
+【步驟 3】在 RHEL 伺服器上執行 - 分段執行（推薦）
+--------------------------------------------------------------------------------
+# 3.1 建立目錄並設定權限
+mkdir -p ~/spring_demo && cd ~/spring_demo && chmod +x setup_java.sh setup_java_yum.sh start_app.sh stop_app.sh test_api.sh
+
+# 3.2 安裝 Java 17
+# 方法 A：使用 YUM 安裝（需要 sudo 權限，推薦）
+./setup_java_yum.sh
+
+# 方法 B：手動下載安裝（不需要 sudo 權限）
+# 如果方法 A 沒有 sudo 權限，使用這個
+# ./setup_java.sh
+
+# 3.3 重新載入環境變數
+source ~/.bashrc
+
+# 3.4 驗證 Java 版本
+java -version
+
+# 3.5 啟動應用程式
+./start_app.sh
+
+# 3.6 等待應用程式啟動
+sleep 10
+
+# 3.7 測試應用程式
+curl http://localhost:8080/
+
+# 3.8 執行完整測試（20 次請求）
+./test_api.sh
+
+
+【步驟 4】查看應用程式日誌（選用）
+--------------------------------------------------------------------------------
+tail -f ~/spring_demo/logs/app.log
+
+# 按 Ctrl+C 退出日誌查看
+
+
+【常用指令】
+--------------------------------------------------------------------------------
+# 停止應用程式
+cd ~/spring_demo && ./stop_app.sh
+
+# 啟動應用程式
+cd ~/spring_demo && ./start_app.sh
+
+# 重新啟動
+cd ~/spring_demo && ./stop_app.sh && sleep 2 && ./start_app.sh
+
+# 測試 API
+curl http://localhost:8080/
+
+# 執行 20 次測試
+cd ~/spring_demo && ./test_api.sh
+
+# 查看應用程式狀態
+ps aux | grep spancer_spring_demo
+
+# 查看 port 8080
+netstat -tlnp | grep 8080
+
+
+【Instana 監控驗證】
+--------------------------------------------------------------------------------
+應用程式啟動後，Instana Agent 會自動監控。
+
+在 Instana UI 中可以看到：
+✓ Java 應用程式實例
+✓ HTTP 請求追蹤
+✓ 隨機錯誤（400, 500, 503）
+✓ 異常追蹤（RuntimeException, IllegalStateException）
+✓ 效能指標
+
+
+【測試結果說明】
+--------------------------------------------------------------------------------
+應用程式會隨機產生以下回應：
+- 50% 機率: HTTP 200 (正常回應)
+- 20% 機率: 拋出異常 (500 或 409)
+- 30% 機率: 回傳錯誤狀態碼 (400, 500, 503)
+
+這樣 Instana 就能監控到各種錯誤情況！
+
+
+================================================================================
